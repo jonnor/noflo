@@ -2,9 +2,11 @@ if typeof process isnt 'undefined' and process.execPath and process.execPath.ind
   chai = require 'chai' unless chai
   graph = require '../src/lib/Graph.coffee'
   journal = require '../src/lib/Journal.coffee'
+  network = require '../src/lib/Network.coffee'
 else
   graph = require 'noflo/src/lib/Graph.js'
   journal = require 'noflo/src/lib/Journal.js'
+  network = require 'noflo/src/lib/Network.js'
 
 describe 'Journal', ->
   describe 'connected to initialized graph', ->
@@ -98,6 +100,17 @@ describe 'Journal', ->
       chai.expect(g.nodes.length).to.equal 2
       chai.expect(g.toJSON()).to.deep.equal graphBeforeError
 
+  describe 'undoing a node removal', ->
+    g = new graph.Graph
+    j = new journal.Journal(g)
+    n = new network.Network(g)
+
+    # TODO: build network of some real components, that stores state
+    # Take one of the nodes out, then try to undo the change
+
+    it 'should restore the same node', ->
+
+    it 'and its internal state be preserved', ->
 
 
 # FIXME: add tests for graph.loadJSON/loadFile, and journal metadata
