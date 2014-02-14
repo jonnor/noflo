@@ -26,6 +26,35 @@ entryToPrettyString = (entry) ->
     when 'endTransaction' then "<<< #{entry.rev}: #{a.id}"
     else throw new Error("Unknown journal entry: #{entry.cmd}")
 
+executeEntry = (graph, entry) ->
+  a = entry.args
+  switch entry.cmd
+    when 'addNode' then graph.addNode a.id, a.component
+    when 'removeNode' then graph.removeNode a.id
+    when 'renameNode' then graph.renameNode a.oldId, a.newId
+    when 'addEdge' then graph.addEdge a.from.node, a.from.port, a.to.node, a.to.port
+    when 'removeEdge' then graph.removeEdge a.from.node, a.from.port, a.to.node, a.to.port
+    when 'addInitial' then graph.addInitial a.from.data, a.to.node, a.to.port
+    when 'removeInitial' then graph.removeInitial a.to.node, a.to.port
+    when 'startTransaction' then null
+    when 'endTransaction' then null
+    else throw new Error("Unknown journal entry: #{entry.cmd}")
+
+executeEntryInversed = (graph, entry) ->
+  a = entry.args
+  switch entry.cmd
+    when 'addNode' then graph.removeNode a.id
+    when 'removeNode' then graph.addNode a.id, a.component
+    when 'renameNode' then graph.renameNode a.newId, a.oldId
+    when 'addEdge' then graph.removeEdge a.from.node, a.from.port, a.to.node, a.to.port
+    when 'removeEdge' then graph.addEdge a.from.node, a.from.port, a.to.node, a.to.port
+    when 'addInitial' then graph.removeInitial a.to.node, a.to.port
+    when 'removeInitial' then graph.addInitial a.from.data, a.to.node, a.to.port
+    when 'startTransaction' then null
+    when 'endTransaction' then null
+    else throw new Error("Unknown journal entry: #{entry.cmd}")
+
+
 
 class Journal extends EventEmitter
   graph: null
@@ -69,16 +98,22 @@ class Journal extends EventEmitter
     @graph.on 'removeInitial', (iip) =>
       @appendCommand 'removeInitial', iip
     @graph.on 'startTransaction', (id, meta) =>
-      return if not @subscribed
-      @lastRevision++
-      @currentRevision = @lastRevision
-      @appendCommand 'startTransaction',
-        id: id
-        metadata: meta
+      @startTransaction id, meta
     @graph.on 'endTransaction', (id, meta) =>
-      @appendCommand 'endTransaction',
-        id: id
-        metadata: meta
+      @endTransaction id, meta
+
+  startTransaction: (id, meta) ->
+    return if not @subscribed
+    @lastRevision++
+    @currentRevision = @lastRevision
+    @appendCommand 'startTransaction',
+      id: id
+      metadata: meta
+
+  endTransaction: (id, meta) ->
+    @appendCommand 'endTransaction',
+      id: id
+      metadata: meta
 
   # FIXME: should be called appendEntry/addEntry
   appendCommand: (cmd, args) ->
@@ -90,33 +125,6 @@ class Journal extends EventEmitter
       rev: @lastRevision
     @entries.push(entry)
 
-  executeEntry: (entry) ->
-    a = entry.args
-    switch entry.cmd
-      when 'addNode' then @graph.addNode a.id, a.component
-      when 'removeNode' then @graph.removeNode a.id
-      when 'renameNode' then @graph.renameNode a.oldId, a.newId
-      when 'addEdge' then @graph.addEdge a.from.node, a.from.port, a.to.node, a.to.port
-      when 'removeEdge' then @graph.removeEdge a.from.node, a.from.port, a.to.node, a.to.port
-      when 'addInitial' then @graph.addInitial a.from.data, a.to.node, a.to.port
-      when 'removeInitial' then @graph.removeInitial a.to.node, a.to.port
-      when 'startTransaction' then null
-      when 'endTransaction' then null
-      else throw new Error("Unknown journal entry: #{entry.cmd}")
-
-  executeEntryInversed: (entry) ->
-    a = entry.args
-    switch entry.cmd
-      when 'addNode' then @graph.removeNode a.id
-      when 'removeNode' then @graph.addNode a.id, a.component
-      when 'renameNode' then @graph.renameNode a.newId, a.oldId
-      when 'addEdge' then @graph.removeEdge a.from.node, a.from.port, a.to.node, a.to.port
-      when 'removeEdge' then @graph.addEdge a.from.node, a.from.port, a.to.node, a.to.port
-      when 'addInitial' then @graph.removeInitial a.to.node, a.to.port
-      when 'removeInitial' then @graph.addInitial a.from.data, a.to.node, a.to.port
-      when 'startTransaction' then null
-      when 'endTransaction' then null
-      else throw new Error("Unknown journal entry: #{entry.cmd}")
 
   moveToRevision: (revId) ->
     return if revId == @currentRevision
@@ -128,7 +136,7 @@ class Journal extends EventEmitter
       for entry in @entries
         continue if entry.rev <= @currentRevision
         break if entry.rev > revId
-        @executeEntry entry
+        executeEntry @graph, entry
 
     else
       # Move backwards, and apply inverse changes
@@ -138,7 +146,7 @@ class Journal extends EventEmitter
         entry = @entries[i]
         continue if entry.rev > @currentRevision
         break if entry.rev == revId
-        @executeEntryInversed entry
+        executeEntryInversed @graph, entry
         
 
     @currentRevision = revId
