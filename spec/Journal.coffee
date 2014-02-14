@@ -68,11 +68,11 @@ describe 'Journal', ->
     g.addInitial 42, 'Foo', 'in'
     g.removeNode 'Foo'
     it 'should change the graph', ->
-      j.moveToRevision 0
+      j.recallRevision 0
       chai.expect(g.nodes.length).to.equal 0
-      j.moveToRevision 2
+      j.recallRevision 2
       chai.expect(g.nodes.length).to.equal 2
-      j.moveToRevision 5
+      j.recallRevision 5
       chai.expect(g.nodes.length).to.equal 1
 
   describe 'linear undo/redo', ->
@@ -116,6 +116,7 @@ describe 'Journal', ->
 
     it 'undo and making changes should only append to journal', ->
       j.undo()
+      chai.expect(g.nodes.length).to.equal 2
       chai.expect(j.currentRevision).to.equal firstHead.revision+1
       g.addNode 'OtherBaz2', 'Component2'
       chai.expect(j.currentRevision).to.equal firstHead.revision+2
@@ -126,13 +127,13 @@ describe 'Journal', ->
         revision: j.currentRevision
 
     it 'one can go back to a revision which is not part of current branch', ->
-      j.moveToRevision(firstHead.revision)
+      j.recallRevision(firstHead.revision)
       chai.expect(g.nodes.length).to.equal 3
       chai.expect(g.nodes[2].component).to.equal 'Component1'
 
     it 'and this action is also revisioned and can be reverted', ->
 #      chai.expect(j.currentRevision).to.equal otherHead.revision+1
-#      j.moveToRevision(otherHead)
+#      j.recallRevision(otherHead)
 #      chai.expect(g.toJSON()).to.equal otherHead
 #      chai.expect(j.currentRevision).to.equal otherHead.revision+2
 
