@@ -55,6 +55,23 @@ executeEntryInversed = (graph, entry) ->
     else throw new Error("Unknown journal entry: #{entry.cmd}")
 
 
+moveGraphWithEntriesFromRevTo = (graph, entries, fromRev, toRev) ->
+  if toRev > fromRev
+    # Forward replay journal to revId
+    for entry in entries
+      continue if entry.rev <= fromRev
+      return entry if entry.rev > toRev
+      executeEntry graph, entry
+
+  else
+    # Move backwards, and apply inverse changes
+    i = entries.length
+    while i > 0
+      i--
+      entry = entries[i]
+      continue if entry.rev > fromRev
+      return entry if entry.rev == toRev
+      executeEntryInversed graph, entry
 
 class Journal extends EventEmitter
   graph: null
@@ -125,32 +142,17 @@ class Journal extends EventEmitter
       rev: @lastRevision
     @entries.push(entry)
 
-
-  moveToRevision: (revId) ->
+  moveToRevision: (revId, metadata) ->
     return if revId == @currentRevision
 
     @subscribed = false
-
-    if revId > @currentRevision
-      # Forward replay journal to revId
-      for entry in @entries
-        continue if entry.rev <= @currentRevision
-        break if entry.rev > revId
-        executeEntry @graph, entry
-
-    else
-      # Move backwards, and apply inverse changes
-      i = @entries.length
-      while i > 0
-        i--
-        entry = @entries[i]
-        continue if entry.rev > @currentRevision
-        break if entry.rev == revId
-        executeEntryInversed @graph, entry
-        
-
+    moveGraphWithEntriesFromRevTo @graph, @entries, @currentRevision, revId
     @currentRevision = revId
     @subscribed = true
+
+   peekAtRevision: (graph, revId) ->
+    entry = moveGraphWithEntriesFromRevTo graph, @entries, -1, revId
+    return entry
 
   undo: () ->
     return unless @currentRevision > 0
