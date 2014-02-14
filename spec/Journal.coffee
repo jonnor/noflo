@@ -32,6 +32,7 @@ describe 'Journal', ->
   describe 'pretty printing', ->
     g = new graph.Graph
     j = new journal.Journal(g)
+
     g.startTransaction 'test1'
     g.addNode 'Foo', 'Bar'
     g.addNode 'Baz', 'Foo'
@@ -39,6 +40,11 @@ describe 'Journal', ->
     g.addInitial 42, 'Foo', 'in'
     g.removeNode 'Foo'
     g.endTransaction 'test1'
+
+    g.startTransaction 'test2'
+    g.removeNode 'Baz'
+    g.endTransaction 'test2'
+
     it 'should be human readable', ->
       ref = """>>> 0: initial
         <<< 0: initial
@@ -51,7 +57,7 @@ describe 'Journal', ->
         '42' -X> in Foo
         DEL Foo(Bar)
         <<< 1: test1"""
-      chai.expect(j.toPrettyString()).to.equal ref
+      chai.expect(j.toPrettyString(0,2)).to.equal ref
 
   describe 'jumping to revision', ->
     g = new graph.Graph
