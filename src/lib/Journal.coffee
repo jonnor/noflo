@@ -61,7 +61,7 @@ class Journal extends EventEmitter
   entries: []
   subscribed: true # Whether we should respond to graph change notifications or not
 
-  constructor: (graph) ->
+  constructor: (graph, metadata) ->
     @graph = graph
     @entries = []
     @subscribed = true
@@ -71,13 +71,13 @@ class Journal extends EventEmitter
     # Sync journal with current graph
     @appendCommand 'startTransaction',
         id: 'initial'
-        metadata: null
+        metadata: metadata
     @appendCommand 'addNode', node for node in @graph.nodes
     @appendCommand 'addEdge', edge for edge in @graph.edges
     @appendCommand 'addIntitial', iip for ipp in @graph.initializers
     @appendCommand 'endTransaction',
       id: 'initial'
-      metadata: null
+      metadata: metadata
 
     # Subscribe to graph changes
     @graph.on 'addNode', (node) =>
