@@ -24,9 +24,10 @@ entryToPrettyString = (entry) ->
     when 'removeInitial' then "'#{a.from.data}' -X> #{a.to.port} #{a.to.node}"
     when 'startTransaction' then ">>> #{entry.rev}: #{a.id}"
     when 'endTransaction' then "<<< #{entry.rev}: #{a.id}"
+    when 'recall' then "RECALL #{a}"
     else throw new Error("Unknown journal entry: #{entry.cmd}")
 
-executeEntry = (graph, entry) ->
+executeEntry = (graph, entry, recallFunc) ->
   a = entry.args
   switch entry.cmd
     when 'addNode' then graph.addNode a.id, a.component
@@ -38,9 +39,10 @@ executeEntry = (graph, entry) ->
     when 'removeInitial' then graph.removeInitial a.to.node, a.to.port
     when 'startTransaction' then null
     when 'endTransaction' then null
+    when 'recall' then recallFunc a
     else throw new Error("Unknown journal entry: #{entry.cmd}")
 
-executeEntryInversed = (graph, entry) ->
+executeEntryInversed = (graph, entry, recallFunc) ->
   a = entry.args
   switch entry.cmd
     when 'addNode' then graph.removeNode a.id
@@ -52,6 +54,7 @@ executeEntryInversed = (graph, entry) ->
     when 'removeInitial' then graph.addInitial a.from.data, a.to.node, a.to.port
     when 'startTransaction' then null
     when 'endTransaction' then null
+    when 'recall' then recallFunc a
     else throw new Error("Unknown journal entry: #{entry.cmd}")
 
 
@@ -142,12 +145,15 @@ class Journal extends EventEmitter
       rev: @lastRevision
     @entries.push(entry)
 
-  moveToRevision: (revId, metadata) ->
+  recallRevision: (revId, metadata) ->
     return if revId == @currentRevision
+
+    @startTransaction 'recall'+revId, metadata
+    @appendCommand 'recall', revId
+    @endTransaction 'recall'+revId, metadata
 
     @subscribed = false
     moveGraphWithEntriesFromRevTo @graph, @entries, @currentRevision, revId
-    @currentRevision = revId
     @subscribed = true
 
    peekAtRevision: (graph, revId) ->
@@ -156,11 +162,11 @@ class Journal extends EventEmitter
 
   undo: () ->
     return unless @currentRevision > 0
-    @moveToRevision(@currentRevision-1)
+    @recallRevision(@currentRevision-1)
 
   redo: () ->
     return unless @currentRevision < @lastRevision
-    @moveToRevision(@currentRevision+1)
+    @recallRevision(@currentRevision+1)
 
   toPrettyString: (startRev, endRev) ->
     startRev |= 0
