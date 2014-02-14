@@ -13,6 +13,9 @@ unless require('./Platform').isBrowser()
 else
   EventEmitter = require 'emitter'
 
+# XXX: hack for playing in NoFlo UI
+journal = require "./Journal"
+
 # This class represents an abstract NoFlo graph containing nodes
 # connected to each other with edges.
 #
@@ -47,6 +50,7 @@ class Graph extends EventEmitter
     @transaction =
       id: null
       depth: 0
+    @journal = new journal.Journal(this)
 
   # ## Group graph changes into transactions
   #
