@@ -100,6 +100,47 @@ describe 'Journal', ->
       chai.expect(g.nodes.length).to.equal 2
       chai.expect(g.toJSON()).to.deep.equal graphBeforeError
 
+  describe 'divergent branch', ->
+    g = new graph.Graph
+    j = new journal.Journal(g)
+    g.addNode 'Foo', 'Bar'
+    g.addNode 'Baz', 'Foo'
+    g.addEdge 'Foo', 'out', 'Baz', 'in'
+    g.addInitial 42, 'Foo', 'in'
+    g.addNode 'Baz2', 'Component1'
+    firstHead =
+      graph: g.toJSON()
+      revision: j.currentRevision
+    otherHead = null
+    chai.expect(j.currentRevision).to.equal 5
+
+    it 'undo and making changes should only append to journal', ->
+      j.undo()
+      chai.expect(j.currentRevision).to.equal firstHead.revision+1
+      g.addNode 'OtherBaz2', 'Component2'
+      chai.expect(j.currentRevision).to.equal firstHead.revision+2
+      chai.expect(g.nodes.length).to.equal 3
+      chai.expect(g.nodes[2].component).to.equal 'Component2'
+      otherHead =
+        graph: g.toJSON()
+        revision: j.currentRevision
+
+    it 'one can go back to a revision which is not part of current branch', ->
+      j.moveToRevision(firstHead.revision)
+      chai.expect(g.nodes.length).to.equal 3
+      chai.expect(g.nodes[2].component).to.equal 'Component1'
+
+    it 'and this action is also revisioned and can be reverted', ->
+#      chai.expect(j.currentRevision).to.equal otherHead.revision+1
+#      j.moveToRevision(otherHead)
+#      chai.expect(g.toJSON()).to.equal otherHead
+#      chai.expect(j.currentRevision).to.equal otherHead.revision+2
+
+    it 'it possible to peek into journal without changing graph', ->
+#      peek = j.peekAtRevision()
+#      peek.graph
+#      peek.metadata
+
   describe 'undoing a node removal', ->
     g = new graph.Graph
     j = new journal.Journal(g)
