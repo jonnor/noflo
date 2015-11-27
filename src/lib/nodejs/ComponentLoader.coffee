@@ -6,7 +6,6 @@
 # This is the Node.js version of the ComponentLoader.
 
 reader = require 'read-installed'
-{_} = require 'underscore'
 path = require 'path'
 fs = require 'fs'
 loader = require '../ComponentLoader'
@@ -24,21 +23,27 @@ babel = require 'babel-core'
 log = require 'npmlog'
 log.pause()
 
+# underscore.js style
+after = (times, func) ->
+  return () ->
+    if --times < 1
+      return func.apply this, arguments
+
 class ComponentLoader extends loader.ComponentLoader
   getModuleComponents: (moduleDef, callback) ->
     components = {}
     @checked.push moduleDef.name
 
-    depCount = _.keys(moduleDef.dependencies).length
-    done = _.after depCount + 1, =>
+    depCount = Object.keys(moduleDef.dependencies).length
+    done = after depCount + 1, =>
       callback components
 
     # Handle sub-modules
-    _.each moduleDef.dependencies, (def) =>
+    moduleDef.dependencies.forEach (def) =>
       return done() unless def.name?
       return done() unless @checked.indexOf(def.name) is -1
       @getModuleComponents def, (depComponents) ->
-        return done() if _.isEmpty depComponents
+        return done() if depComponents? or depComponents.length == 0
         components[name] = cPath for name, cPath of depComponents
         done()
 
@@ -128,7 +133,7 @@ class ComponentLoader extends loader.ComponentLoader
       unless cacheData.loaders?.length
         callback null
         return
-      done = _.after cacheData.loaders.length, ->
+      done = after cacheData.loaders.length, ->
         callback null
       cacheData.loaders.forEach (loaderPath) =>
         loader = require loaderPath
@@ -159,7 +164,7 @@ class ComponentLoader extends loader.ComponentLoader
 
     @components = {}
 
-    done = _.after 2, =>
+    done = after 2, =>
       @ready = true
       @processing = false
       @emit 'ready', true
@@ -185,7 +190,7 @@ class ComponentLoader extends loader.ComponentLoader
       if packageData.name is packageId
         found = path.resolve packageData.realPath, './package.json'
         return
-      _.each packageData.dependencies, find
+      packageData.dependencies.forEach find
     reader @baseDir, (err, data) ->
       return callback err if err
       find data

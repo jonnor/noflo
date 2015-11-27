@@ -21,7 +21,6 @@
     "npmlog": "0.0.6",
     "read-installed": "4.0.3",
     "shell": "0.2.10",
-    "underscore": "1.8.3"
   },
   "devDependencies": {
     "chai": "3.4.0",

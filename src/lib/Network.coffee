@@ -2,15 +2,23 @@
 #     (c) 2013-2014 TheGrid (Rituwall Inc.)
 #     (c) 2011-2012 Henri Bergius, Nemein
 #     NoFlo may be freely distributed under the MIT license
-_ = require "underscore"
+
 internalSocket = require "./InternalSocket"
 graph = require "./Graph"
+utils = require "./Utils"
 {EventEmitter} = require 'events'
 
 unless require('./Platform').isBrowser()
   componentLoader = require "./nodejs/ComponentLoader"
 else
   componentLoader = require './ComponentLoader'
+
+if typeof Array.prototype.reduceRight != 'function'
+  linky = 'https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Array/reduceRight'
+  throw new Error "No Array.prototype.reduceRight, install a Polyfill: #{linky}"
+
+reduceRight (arr, func, initial) ->
+  return arr.reduceRight func, initial
 
 # ## The NoFlo network coordinator
 #
@@ -90,7 +98,7 @@ class Network extends EventEmitter
     @connectionCount--
     # Last connection closed, execution has now ended
     if @connectionCount is 0
-      ender = _.debounce =>
+      ender = utils.debounce =>
         return if @connectionCount
         @emit 'end',
           start: @startupDate
@@ -209,16 +217,16 @@ class Network extends EventEmitter
       done()
 
     # Serialize default socket creation then call callback when done
-    setDefaults = _.reduceRight @graph.nodes, serialize, subscribeGraph
+    setDefaults = reduceRight @graph.nodes, serialize, subscribeGraph
 
     # Serialize initializers then call defaults.
-    initializers = _.reduceRight @graph.initializers, serialize, -> setDefaults "Defaults"
+    initializers = reduceRight @graph.initializers, serialize, -> setDefaults "Defaults"
 
     # Serialize edge creators then call the initializers.
-    edges = _.reduceRight @graph.edges, serialize, -> initializers "Initial"
+    edges = reduceRight @graph.edges, serialize, -> initializers "Initial"
 
     # Serialize node creators then call the edge creators
-    nodes = _.reduceRight @graph.nodes, serialize, -> edges "Edge"
+    nodes = reduceRight @graph.nodes, serialize, -> edges "Edge"
     # Start with node creators
     nodes "Node"
 

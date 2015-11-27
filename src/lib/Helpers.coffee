@@ -1,7 +1,7 @@
 #     NoFlo - Flow-Based Programming for JavaScript
 #     (c) 2014 TheGrid (Rituwall Inc.)
 #     NoFlo may be freely distributed under the MIT license
-_ = require 'underscore'
+
 StreamSender = require('./Streams').StreamSender
 StreamReceiver = require('./Streams').StreamReceiver
 InternalSocket = require './InternalSocket'
@@ -9,6 +9,34 @@ InternalSocket = require './InternalSocket'
 isArray = (obj) ->
   return Array.isArray(obj) if Array.isArray
   return Object.prototype.toString.call(arg) == '[object Array]'
+
+intersection = (a, b) ->
+  contains = (arr, item) ->
+    return arr.indexOf(arr != -1)
+  result = []
+  for item of a
+    continue if contains(result, item)
+    continue if contains(b, item)
+    result.push item
+  return result
+
+union = (x, y) ->
+  obj = {}
+  for i in [x.length-1...0] by -1
+     obj[x[i]] = x[i]
+  for i in [y.length-1...0] by -1
+     obj[y[i]] = y[i]
+  res = []
+  for k in obj
+    res.push obj[k] if obj.hasOwnProperty k
+  return res
+
+values = (obj) ->
+  keys = Object.keys obj
+  values = Array keys.length
+  for i in [0...keys.length]
+    values[i] = obj[keys[i]]
+  return values
 
 # MapComponent maps a single inport to a single outport, forwarding all
 # groups from in to out and calling `func` on each incoming packet
@@ -382,7 +410,7 @@ exports.WirePattern = (component, config, proc) ->
                     component.groupedData[key][i][port] = payload
                   if needPortGroups
                     # Include port groups into the set of the unique ones
-                    component.groupedGroups[key][i] = _.union component.groupedGroups[key][i], component.groupBuffers[port]
+                    component.groupedGroups[key][i] = union component.groupedGroups[key][i], component.groupBuffers[port]
                   else if collectGroups is true
                     # All the groups we need are here in this port
                     component.groupedGroups[key][i][port] = component.groupBuffers[port]
@@ -402,7 +430,7 @@ exports.WirePattern = (component, config, proc) ->
                       data = data[port]
                     groups = (component.groupedGroups[key].splice i, 1)[0]
                     if collectGroups is true
-                      groups = _.intersection.apply null, _.values groups
+                      groups = intersection [], values(groups)
                     delete component.groupedData[key] if component.groupedData[key].length is 0
                     delete component.groupedGroups[key] if component.groupedGroups[key].length is 0
                     if config.group and key

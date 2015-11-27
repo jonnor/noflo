@@ -4,7 +4,6 @@ noflo = require "../lib/NoFlo"
 cli = require "cli"
 clc = require "cli-color"
 path = require "path"
-{_} = require "underscore"
 
 cli.enable "help"
 cli.enable "version"
@@ -91,7 +90,7 @@ cli.main (args, options) ->
     loader = new noflo.ComponentLoader baseDir, options
     loader.listComponents (components) ->
       todo = components.length
-      _.each components, (path, component) ->
+      components.forEach (path, component) ->
         instance = loader.load component, (err, instance) ->
           if err
             console.log err
